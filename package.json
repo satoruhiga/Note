@@ -4,7 +4,8 @@
   "description": "A minimal Electron application",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "package": "electron-packager ./ Note --platform=darwin,win32 --arch=x64 --overwrite --prune"
   },
   "repository": {
     "type": "git",
@@ -23,6 +24,10 @@
   },
   "homepage": "https://github.com/electron/electron-quick-start#readme",
   "devDependencies": {
+    "electron-packager": "^7.1.0",
     "electron-prebuilt": "^1.2.0"
+  },
+  "dependencies": {
+    "electron-json-storage": "^2.0.0"
   }
 }

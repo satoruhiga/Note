@@ -1,53 +1,91 @@
 const electron = require('electron')
-// Module to control application life.
 const app = electron.app
-// Module to create native browser window.
 const BrowserWindow = electron.BrowserWindow
 
-// Keep a global reference of the window object, if you don't, the window will
-// be closed automatically when the JavaScript object is garbage collected.
-let mainWindow
+const storage = require('electron-json-storage');
 
-function createWindow () {
-  // Create the browser window.
-  mainWindow = new BrowserWindow({width: 800, height: 600})
+const ipc = require('electron').ipcMain;
+const dialog = require('electron').dialog;
 
-  // and load the index.html of the app.
-  mainWindow.loadURL(`file://${__dirname}/index.html`)
+const os = require('os');
+const path = require('path');
+const fs = require('fs');
 
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools()
+let mainWindow;
+var file_path = null;
 
-  // Emitted when the window is closed.
-  mainWindow.on('closed', function () {
-    // Dereference the window object, usually you would store windows
-    // in an array if your app supports multi windows, this is the time
-    // when you should delete the corresponding element.
-    mainWindow = null
-  })
+ipc.on('open-file-dialog', () => {
+	dialog.showOpenDialog({
+		properties: ['openFile']
+	}, function (files) {
+		if (files) {
+			if (files.length == 0) return;
+
+			const file = files[0];
+			storage.set('file_path', file, function (err) {
+				if (err) throw err;
+				else reloadFile(file);
+			});
+		}
+	});
+});
+
+ipc.on('main-window-loaded', () => {
+	storage.get('file_path', function (err, data) {
+		if (err) {
+			ipc.send('open-file-dialog');
+		} else {
+			reloadFile(data);
+		}
+	});
+});
+
+ipc.on('edit-file', (e, arg) => {
+	if (file_path == null) return;
+	fs.writeFile(file_path, arg);
+});
+
+function reloadFile(path) {
+	if (mainWindow == null) return;
+
+	file_path = path;
+
+	fs.readFile(path, 'utf8', function (err, data) {
+		if (err) throw err;
+		mainWindow.webContents.send('update-file', data);
+	});
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.on('ready', createWindow)
+function createWindow() {
+	storage.get('window-size', (e, opt) => {
+		if (e) throw e;
 
-// Quit when all windows are closed.
+		opt['frame'] = false;
+		mainWindow = new BrowserWindow(opt);
+		mainWindow.loadURL(`file://${__dirname}/index.html`);
+		// mainWindow.webContents.openDevTools();
+		mainWindow.on('closed', () => {
+			mainWindow = null;
+		});
+
+		mainWindow.on('close', () => {
+			storage.set('window-size', mainWindow.getBounds(), (e) => { });
+		});
+	});
+}
+
 app.on('window-all-closed', function () {
-  // On OS X it is common for applications and their menu bar
-  // to stay active until the user quits explicitly with Cmd + Q
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+	if (process.platform !== 'darwin') {
+		app.quit()
+	}
+})
+
+app.on('ready', () => {
+	createWindow();
 })
 
 app.on('activate', function () {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (mainWindow === null) {
-    createWindow()
-  }
+	if (mainWindow === null) {
+		createWindow();
+	}
 })
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
