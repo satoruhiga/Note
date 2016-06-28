@@ -22,20 +22,21 @@ ipc.on('open-file-dialog', () => {
 			if (files.length == 0) return;
 
 			const file = files[0];
+
 			storage.set('file_path', file, function (err) {
 				if (err) throw err;
-				else reloadFile(file);
+				reloadFile(file);
 			});
 		}
 	});
 });
 
 ipc.on('main-window-loaded', () => {
-	storage.get('file_path', function (err, data) {
+	storage.get('file_path', function (err, path) {
 		if (err) {
 			ipc.send('open-file-dialog');
 		} else {
-			reloadFile(data);
+			reloadFile(path);
 		}
 	});
 });
@@ -48,11 +49,22 @@ ipc.on('edit-file', (e, arg) => {
 function reloadFile(path) {
 	if (mainWindow == null) return;
 
+	if (file_path)	
+		fs.unwatchFile(file_path);
+	
 	file_path = path;
 
-	fs.readFile(path, 'utf8', function (err, data) {
-		if (err) throw err;
-		mainWindow.webContents.send('update-file', data);
+	var fn = () => {
+		fs.readFile(path, 'utf8', function (err, data) {
+			if (err) throw err;
+			mainWindow.webContents.send('update-file', data);
+		});
+	};
+	fn();
+
+	fs.watch(file_path, (event, filename) => {
+		fn();
+		console.log(event + ' to ' + filename);
 	});
 }
 
