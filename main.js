@@ -3,6 +3,7 @@ const app = electron.app
 const BrowserWindow = electron.BrowserWindow
 
 const storage = require('electron-json-storage');
+const chokidar = require('chokidar');
 
 const ipc = require('electron').ipcMain;
 const dialog = require('electron').dialog;
@@ -14,74 +15,63 @@ const fs = require('fs');
 let mainWindow;
 var file_path = null;
 
+// storage.clear(() => { });
+
 ipc.on('open-file-dialog', () => {
-	dialog.showOpenDialog({
-		properties: ['openFile']
-	}, function (files) {
-		if (files) {
-			if (files.length == 0) return;
-
-			const file = files[0];
-
-			storage.set('file_path', file, function (err) {
-				if (err) throw err;
-				reloadFile(file);
-			});
-		}
-	});
+	open_file_dialog();
 });
 
-ipc.on('main-window-loaded', () => {
-	storage.get('file_path', function (err, path) {
-		if (err) {
-			ipc.send('open-file-dialog');
-		} else {
-			reloadFile(path);
-		}
-	});
-});
 
 ipc.on('edit-file', (e, arg) => {
 	if (file_path == null) return;
 	fs.writeFile(file_path, arg);
 });
 
-function reloadFile(path) {
-	if (mainWindow == null) return;
+function readFile() {
+	try {
+		data = fs.readFileSync(file_path);
+		var t = data.toString('utf8');
+		// console.log(t);
+		mainWindow.webContents.send('update-file', t);
+	} catch (e) {
+		console.log('readFile failed');
+		console.log(e);
+	}
+}
 
-	if (file_path)	
-		fs.unwatchFile(file_path);
-	
-	file_path = path;
+var watcher = null;
+function setWatchPath() {
+	storage.get("file_path", (e, data) => {
+		file_path = data;
+		
+		if (watcher) watcher.close();
 
-	var fn = () => {
-		fs.readFile(path, 'utf8', function (err, data) {
-			if (err) throw err;
-			mainWindow.webContents.send('update-file', data);
+		watcher = chokidar.watch(file_path);
+		watcher.on('all', (event, path) => {
+			readFile(path);
+			console.log(event + ' to ' + path);
 		});
-	};
-	fn();
 
-	fs.watch(file_path, (event, filename) => {
-		fn();
-		console.log(event + ' to ' + filename);
+		readFile();
 	});
 }
 
 function createWindow() {
 	storage.get('window-size', (e, opt) => {
-		if (e) throw e;
-
+		if (e) opt = {};
 		opt['frame'] = false;
-		mainWindow = new BrowserWindow(opt);
-		mainWindow.loadURL(`file://${__dirname}/index.html`);
-		// mainWindow.webContents.openDevTools();
-		mainWindow.on('closed', () => {
-			mainWindow = null;
-		});
 
-		mainWindow.on('close', () => {
-			storage.set('window-size', mainWindow.getBounds(), (e) => { });
+		storage.get('file_path', (e, data) => {
+			mainWindow = new BrowserWindow(opt);
+			mainWindow.loadURL(`file://${__dirname}/index.html`);
+			// mainWindow.webContents.openDevTools();
+			mainWindow.on('closed', () => {
+				mainWindow = null;
+			});
+
+			mainWindow.on('close', () => {
+				storage.set('window-size', mainWindow.getBounds(), (e) => { });
+			});
 		});
 	});
 }
@@ -98,6 +88,32 @@ app.on('ready', () => {
 
 app.on('activate', function () {
 	if (mainWindow === null) {
-		createWindow();
 	}
 })
+
+function open_file_dialog() {
+		dialog.showOpenDialog({
+		properties: ['openFile']
+	}, function (files) {
+		if (files) {
+			if (files.length == 0) return;
+
+			const file = files[0];
+			
+			storage.set('file_path', file, function (err) {
+				if (err) throw err;
+				setWatchPath();
+			});
+		}
+	});
+}
+
+ipc.on('main-window-loaded', () => {
+	storage.has('file_path', (e, hasKey) => {
+		if (!hasKey) {
+			open_file_dialog();
+		}	else {
+			setWatchPath();
+		}
+	});
+});
