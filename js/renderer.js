@@ -1,7 +1,3 @@
-// This file is required by the index.html file and will
-// be executed in the renderer process for that window.
-// All of the Node.js APIs are available in this process.
-
 const ipc = require('electron').ipcRenderer
 
 const settings_btn = document.getElementById('settings_btn')
@@ -17,6 +13,18 @@ main_text_area.addEventListener('input', (e) => {
 	timeout = setTimeout(() => {
 		ipc.send('edit-file', main_text_area.value);
 	}, 5000);
+});
+
+// TAB
+main_text_area.addEventListener('keydown', function (e) {
+	if (e.keyCode === 9) {
+		e.preventDefault();
+		var elem = e.target;
+		var val = elem.value;
+		var pos = elem.selectionStart;
+		elem.value = val.substr(0, pos) + '\t' + val.substr(pos, val.length);
+		elem.setSelectionRange(pos + 1, pos + 1);
+	}
 });
 
 ipc.on('update-file', function (event, arg) {

@@ -12,24 +12,28 @@
 				height: 100%;
 				margin: 0;
 				padding: 0;
-				background: #fff;
+				background: rgb(245, 245, 245);
+				overflow: hidden;
 				-webkit-font-smoothing: antialiased;
 			}
 
 			#main_text_area {
 				width: 100%;
-				height: 99%;
+				height: 100%;
 				margin: 0;
-				padding: 0;
 				border-width: 0;
 				box-sizing: border-box;
-				padding: 28px 8px 8px 8px;
-				font-size: 13px;
+				padding: 30px 10px 10px 10px;
+				font-size: 12px;
 				background: transparent;
 				font-weight: 500;
 				letter-spacing: 0.8px;
 				line-height: 1.5em;
 				font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, "ヒラギノ角ゴ Pro W3", "Hiragino Kaku Gothic Pro", メイリオ, Meiryo, "ＭＳ Ｐゴシック", "MS PGothic", sans-serif;
+			}
+
+			#main_text_area::-webkit-scrollbar {
+				display: none;
 			}
 
 			#main_text_area:focus {
@@ -43,14 +47,14 @@
 			}
 
 			#titlebar {
-				-webkit-user-select: none;
-				-webkit-app-region: drag;
-				background-color: #FF0;
+				background-color: rgb(255, 255, 0);
 				position: absolute;
 				top: 0;
 				right: 0;
 				width: 100%;
 				height: 20px;
+				-webkit-user-select: none;
+				-webkit-app-region: drag;
 			}
 		</style>
 	</head>
@@ -66,7 +70,6 @@
 	</body>
 
 	<script>
-		// You can also require other files to run in this process
-		require('./renderer.js')
+		require('./js/renderer.js')
 	</script>
 </html>
