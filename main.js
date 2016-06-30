@@ -45,7 +45,7 @@ var watcher = null;
 function setWatchPath() {
 	storage.get("file_path", (e, data) => {
 		file_path = data;
-		
+
 		if (watcher) watcher.close();
 
 		watcher = chokidar.watch(file_path);
@@ -81,6 +81,11 @@ function createWindow() {
 					{ label: "About Note", selector: "orderFrontStandardAboutPanel:" },
 					{ type: "separator" },
 					{ label: "Quit", accelerator: "Command+Q", click: function() { app.quit(); }}
+				]}, {
+				label: "File",
+				submenu: [
+					{ label: "New Note", accelerator: "CmdOrCtrl+N", click: function() { createWindow(); }},
+					{ label: "Close Note", accelerator: "CmdOrCtrl+W", selector: "close" }
 				]}, {
 				label: "Edit",
 				submenu: [
@@ -122,7 +127,7 @@ function open_file_dialog() {
 			if (files.length == 0) return;
 
 			const file = files[0];
-			
+
 			storage.set('file_path', file, function (err) {
 				if (err) throw err;
 				setWatchPath();
